@@ -32,9 +32,11 @@ class CatGenieSensorDescription(SensorEntityDescription):
 
 SENSORS: tuple[CatGenieSensorDescription, ...] = (
     CatGenieSensorDescription(
+        # The cloud reports cartridge level as cleaning cycles left (a full
+        # SaniSolution cartridge is about 120 cycles), not a percentage.
         key="sani_solution",
         translation_key="sani_solution",
-        native_unit_of_measurement=PERCENTAGE,
+        native_unit_of_measurement="cycles",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: d.remaining_sani_solution,
     ),

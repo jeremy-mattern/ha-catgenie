@@ -72,7 +72,7 @@
       }
     },
     "sensor": {
-      "sani_solution": { "name": "SaniSolution remaining" },
+      "sani_solution": { "name": "SaniSolution cycles left" },
       "last_clean": { "name": "Last clean" },
       "cleaning_progress": { "name": "Cleaning progress" },
       "total_cycles": { "name": "Lifetime cycles" },

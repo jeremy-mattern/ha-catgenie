@@ -12,7 +12,7 @@ For each CatGenie on your account:
 
 | Entity | Type | What it shows or does |
 |---|---|---|
-| SaniSolution remaining | Sensor (%) | Cartridge level. Good for "order a refill" automations. |
+| SaniSolution cycles left | Sensor (cycles) | Cleaning cycles left on the cartridge (a full one is about 120). Good for "order a refill" automations. |
 | Last clean | Sensor (timestamp) | When the last cycle finished. |
 | Cleaning progress | Sensor (%) | Progress of the current cycle, or empty when idle. |
 | Lifetime cycles | Sensor | Total cleaning cycles since activation. |
@@ -59,7 +59,7 @@ If the saved login stops working (for example, because it was revoked), Home Ass
 
 ## Automation ideas
 
-- Get a phone notification when **SaniSolution remaining** drops below 15%.
+- Get a phone notification when **SaniSolution cycles left** drops below 15.
 - Flash a light when **Problem** turns on.
 - Switch **Cleaning mode** to Manual at night so the unit stays quiet, and back to Automatic in the morning.
 - Pause other noisy devices while **Cleaning** is on.

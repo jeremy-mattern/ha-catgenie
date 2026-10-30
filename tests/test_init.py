@@ -36,7 +36,8 @@ async def test_setup_creates_entities(
     assert entry.state is ConfigEntryState.LOADED
 
     assert (
-        hass.states.get("sensor.downstairs_genie_sanisolution_remaining").state == "62"
+        hass.states.get("sensor.downstairs_genie_sanisolution_cycles_left").state
+        == "62"
     )
     assert hass.states.get("sensor.downstairs_genie_cleaning_progress").state == "40"
     assert hass.states.get("sensor.downstairs_genie_lifetime_cycles").state == "812"
@@ -148,7 +149,7 @@ async def test_unnamed_unit_and_bad_record(
 
     device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, "CG7654321")})
     assert device.name == "CatGenie A.I."
-    assert hass.states.get("sensor.catgenie_a_i_sanisolution_remaining").state == "62"
+    assert hass.states.get("sensor.catgenie_a_i_sanisolution_cycles_left").state == "62"
     assert hass.states.get("sensor.catgenie_a_i_last_clean").state == "unknown"
     assert hass.states.get("sensor.catgenie_a_i_lifetime_cycles").state == "unknown"
     assert (
