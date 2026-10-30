@@ -57,11 +57,11 @@ def device() -> Device:
 
 
 @pytest.fixture
-def mock_client(device: Device) -> Generator[AsyncMock]:
+def mock_client() -> Generator[AsyncMock]:
     """Patch the API client used by the coordinator."""
     with patch(
         "custom_components.catgenie.coordinator.CatGenieClient", autospec=True
     ) as cls:
         client = cls.return_value
-        client.get_devices.return_value = [device]
+        client._request.return_value = {"thingList": [DEVICE_PAYLOAD]}
         yield client

@@ -8,6 +8,7 @@ from typing import Any
 
 from curl_cffi import CurlError
 from curl_cffi.requests import AsyncSession
+from pydantic import ValidationError
 
 from catgenie import (
     CatGenieAuth,
@@ -17,7 +18,7 @@ from catgenie import (
     Credentials,
     Device,
 )
-from catgenie.const import TLS_IMPERSONATE
+from catgenie.const import ENDPOINT_DEVICES, TLS_IMPERSONATE
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
@@ -32,7 +33,45 @@ _LOGGER = logging.getLogger(__name__)
 # pydantic validation errors are ValueErrors too.
 API_ERRORS = (CatGenieException, CurlError, ValueError)
 
+DEVICES_PARAMS = {"useFleetIndexAndGetRealConnectivity": "true"}
+
+# Top-level string fields the library's Device model requires. The cloud can
+# send null for any of them; treat null as empty so the unit still loads.
+_REQUIRED_STRINGS = ("name", "macAddress", "hwRevision", "fwVersion")
+
 type CatGenieConfigEntry = ConfigEntry[CatGenieCoordinator]
+
+
+def _drop_nulls(value: Any) -> Any:
+    """Remove null values from nested dicts so model defaults apply instead."""
+    if isinstance(value, dict):
+        return {k: _drop_nulls(v) for k, v in value.items() if v is not None}
+    if isinstance(value, list):
+        return [_drop_nulls(v) for v in value if v is not None]
+    return value
+
+
+def parse_device(thing: Any) -> Device | None:
+    """Turn one raw device record into a Device, tolerating nulls.
+
+    Returns None (and logs why) if the record still can't be read, so one odd
+    unit doesn't take the others on the account down with it.
+    """
+    if not isinstance(thing, dict) or not thing.get("manufacturerId"):
+        _LOGGER.warning("Skipping a CatGenie record with no serial number")
+        return None
+    cleaned = _drop_nulls(thing)
+    for key in _REQUIRED_STRINGS:
+        cleaned.setdefault(key, "")
+    try:
+        return Device.model_validate(cleaned)
+    except ValidationError as err:
+        _LOGGER.warning(
+            "Skipping CatGenie %s: unexpected data from the cloud: %s",
+            thing.get("manufacturerId"),
+            err,
+        )
+        return None
 
 
 class CatGenieCoordinator(DataUpdateCoordinator[dict[str, Device]]):
@@ -63,7 +102,12 @@ class CatGenieCoordinator(DataUpdateCoordinator[dict[str, Device]]):
     async def _async_update_data(self) -> dict[str, Device]:
         """Fetch every device on the account."""
         try:
-            devices = await self.client.get_devices()
+            # Fetch the raw list rather than CatGenieClient.get_devices(): the
+            # library's model rejects the whole response if any unit has a null
+            # field (e.g. a CatGenie that was never given a name in the app).
+            raw = await self.client._request(
+                "GET", ENDPOINT_DEVICES, params=DEVICES_PARAMS
+            )
         except CatGenieAuthenticationError as err:
             raise ConfigEntryAuthFailed(
                 translation_domain=DOMAIN, translation_key="auth_failed"
@@ -74,7 +118,20 @@ class CatGenieCoordinator(DataUpdateCoordinator[dict[str, Device]]):
                 translation_key="update_failed",
                 translation_placeholders={"error": str(err)},
             ) from err
-        return {device.manufacturer_id: device for device in devices}
+
+        things = (raw.get("thingList") or []) if isinstance(raw, dict) else []
+        devices: dict[str, Device] = {}
+        for thing in things:
+            device = parse_device(thing)
+            if device is not None:
+                devices[device.manufacturer_id] = device
+        if things and not devices:
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="update_failed",
+                translation_placeholders={"error": "no device could be read"},
+            )
+        return devices
 
     async def async_run_command(self, command: Callable[[], Awaitable[Any]]) -> None:
         """Send a command to the cloud, then refresh so the UI catches up."""

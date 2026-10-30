@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 
-from .conftest import make_jwt
+from .conftest import DEVICE_PAYLOAD, make_jwt
 
 
 @pytest.fixture
@@ -66,7 +66,7 @@ async def test_auth_failure_starts_reauth(
     hass: HomeAssistant, entry: MockConfigEntry, mock_client
 ) -> None:
     """A rejected refresh token puts the entry into re-authentication."""
-    mock_client.get_devices.side_effect = CatGenieAuthenticationError("revoked")
+    mock_client._request.side_effect = CatGenieAuthenticationError("revoked")
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.SETUP_ERROR
@@ -78,7 +78,7 @@ async def test_cloud_down_retries(
     hass: HomeAssistant, entry: MockConfigEntry, mock_client
 ) -> None:
     """An empty or failed cloud response means retry later, not reauth."""
-    mock_client.get_devices.side_effect = ValueError("empty body")
+    mock_client._request.side_effect = ValueError("empty body")
     await hass.config_entries.async_setup(entry.entry_id)
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
@@ -124,3 +124,44 @@ async def test_commands(
             {"entity_id": "button.downstairs_genie_stop_cleaning"},
             blocking=True,
         )
+
+
+async def test_unnamed_unit_and_bad_record(
+    hass: HomeAssistant, entry: MockConfigEntry, mock_client
+) -> None:
+    """A unit with null fields still loads; an unreadable record is skipped."""
+    unnamed = {
+        **DEVICE_PAYLOAD,
+        "manufacturerId": "CG7654321",
+        "name": None,
+        "macAddress": None,
+        "lastClean": None,
+        "configuration": {**DEVICE_PAYLOAD["configuration"], "activation": None},
+    }
+    broken = {"manufacturerId": "CG0000000", "operationStatus": {"state": "bogus"}}
+    mock_client._request.return_value = {
+        "thingList": [DEVICE_PAYLOAD, unnamed, broken, {"no": "serial"}]
+    }
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.LOADED
+
+    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, "CG7654321")})
+    assert device.name == "CatGenie A.I."
+    assert hass.states.get("sensor.catgenie_a_i_sanisolution_remaining").state == "62"
+    assert hass.states.get("sensor.catgenie_a_i_last_clean").state == "unknown"
+    assert hass.states.get("sensor.catgenie_a_i_lifetime_cycles").state == "unknown"
+    assert (
+        dr.async_get(hass).async_get_device(identifiers={(DOMAIN, "CG0000000")}) is None
+    )
+
+
+async def test_every_record_unreadable_retries(
+    hass: HomeAssistant, entry: MockConfigEntry, mock_client
+) -> None:
+    """If nothing on the account can be read, setup retries instead of loading empty."""
+    mock_client._request.return_value = {
+        "thingList": [{"manufacturerId": "X", "operationStatus": {"state": "bogus"}}]
+    }
+    await hass.config_entries.async_setup(entry.entry_id)
+    assert entry.state is ConfigEntryState.SETUP_RETRY

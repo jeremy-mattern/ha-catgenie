@@ -9,5 +9,5 @@
   "issue_tracker": "https://github.com/jeremy-mattern/ha-catgenie/issues",
   "loggers": ["catgenie", "curl_cffi"],
   "requirements": ["catgenie==0.1.6"],
-  "version": "1.0.0"
+  "version": "1.0.1"
 }
