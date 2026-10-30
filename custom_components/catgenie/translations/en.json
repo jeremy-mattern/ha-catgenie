@@ -1,0 +1,101 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect your CatGenie",
+        "description": "Choose how to sign in to your CatGenie account.",
+        "menu_options": {
+          "phone": "Text me a code (recommended)",
+          "token": "I already have a refresh token"
+        }
+      },
+      "phone": {
+        "title": "Phone number",
+        "description": "Enter the phone number you use to sign in to the CatGenie app. A login code will be sent by SMS.",
+        "data": {
+          "country_code": "Country code",
+          "phone": "Phone number"
+        },
+        "data_description": {
+          "country_code": "Digits only, without the plus sign. 1 for the US and Canada.",
+          "phone": "Your number without the country code."
+        }
+      },
+      "verify": {
+        "title": "Enter the SMS code",
+        "description": "A code was sent to {phone}. Enter it below. Codes expire after a few minutes.",
+        "data": {
+          "code": "SMS code"
+        }
+      },
+      "token": {
+        "title": "Refresh token",
+        "description": "Paste a CatGenie refresh token. Treat it like a password.",
+        "data": {
+          "refresh_token": "Refresh token"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Sign in again",
+        "description": "Your CatGenie login has expired or was revoked. Continue to receive a new SMS code."
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the CatGenie cloud. Try again in a minute.",
+      "invalid_code": "That code was not accepted. It may have expired; go back and request a new one.",
+      "invalid_phone": "Enter a phone number.",
+      "invalid_token": "That refresh token was not accepted."
+    },
+    "abort": {
+      "already_configured": "This CatGenie account is already set up.",
+      "reauth_successful": "Signed in again successfully.",
+      "wrong_account": "You signed in to a different CatGenie account than the one being re-authenticated."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "cleaning": { "name": "Cleaning" },
+      "problem": { "name": "Problem" },
+      "online": { "name": "Cloud connection" }
+    },
+    "button": {
+      "start_cleaning": { "name": "Start cleaning" },
+      "stop_cleaning": { "name": "Stop cleaning" }
+    },
+    "select": {
+      "cleaning_mode": {
+        "name": "Cleaning mode",
+        "state": {
+          "automatic": "Automatic (after cat visit)",
+          "manual": "Manual"
+        }
+      }
+    },
+    "sensor": {
+      "sani_solution": { "name": "SaniSolution remaining" },
+      "last_clean": { "name": "Last clean" },
+      "cleaning_progress": { "name": "Cleaning progress" },
+      "total_cycles": { "name": "Lifetime cycles" },
+      "error": { "name": "Error" },
+      "cat_delay": { "name": "Cat delay" },
+      "volume": { "name": "Volume" }
+    },
+    "switch": {
+      "child_lock": { "name": "Child lock" },
+      "extra_dry": { "name": "Extra dry" },
+      "extra_wash": { "name": "Extra wash" },
+      "extra_shake": { "name": "Extra shake" }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "The CatGenie cloud rejected the saved login. Re-authenticate the integration."
+    },
+    "update_failed": {
+      "message": "Could not get an update from the CatGenie cloud: {error}"
+    },
+    "command_failed": {
+      "message": "The CatGenie cloud did not accept the command: {error}"
+    }
+  }
+}

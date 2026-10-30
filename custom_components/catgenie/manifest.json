@@ -1,0 +1,13 @@
+{
+  "domain": "catgenie",
+  "name": "CatGenie A.I.",
+  "codeowners": ["@jeremy-mattern"],
+  "config_flow": true,
+  "documentation": "https://github.com/jeremy-mattern/ha-catgenie",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/jeremy-mattern/ha-catgenie/issues",
+  "loggers": ["catgenie", "curl_cffi"],
+  "requirements": ["catgenie==0.1.6"],
+  "version": "1.0.0"
+}

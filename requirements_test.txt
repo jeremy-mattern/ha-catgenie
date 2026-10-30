@@ -1,0 +1,3 @@
+catgenie==0.1.6
+pytest-homeassistant-custom-component
+ruff
