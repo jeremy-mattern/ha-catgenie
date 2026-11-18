@@ -74,7 +74,7 @@ def parse_device(thing: Any) -> Device | None:
         return None
 
 
-class CatGenieCoordinator(DataUpdateCoordinator[dict[str, Device]]):
+class CatGenieCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Polls the PetNovations cloud for every CatGenie on the account."""
 
     config_entry: CatGenieConfigEntry
@@ -99,7 +99,7 @@ class CatGenieCoordinator(DataUpdateCoordinator[dict[str, Device]]):
         self.client = CatGenieClient(self.credentials, session=self.session)
         self.client.set_auth(auth)
 
-    async def _async_update_data(self) -> dict[str, Device]:
+    async def _async_update_data(self) -> dict[str, Any]:
         """Fetch every device on the account."""
         try:
             # Fetch the raw list rather than CatGenieClient.get_devices(): the
@@ -119,12 +119,24 @@ class CatGenieCoordinator(DataUpdateCoordinator[dict[str, Device]]):
                 translation_placeholders={"error": str(err)},
             ) from err
 
+        # --- NEW API CALL FOR PET STATS ---
+        pet_stats = {}
+        try:
+            pet_stats = await self.client.get_pet_statistics()
+        except Exception as err:
+            _LOGGER.warning("Could not fetch pet statistics: %s", err)
+
         things = (raw.get("thingList") or []) if isinstance(raw, dict) else []
-        devices: dict[str, Device] = {}
+        devices: dict[str, Any] = {}
         for thing in things:
             device = parse_device(thing)
             if device is not None:
-                devices[device.manufacturer_id] = device
+                # Store both the device and the stats payload
+                devices[device.manufacturer_id] = {
+                    "device": device,
+                    "pet_stats": pet_stats
+                }
+                
         if things and not devices:
             raise UpdateFailed(
                 translation_domain=DOMAIN,

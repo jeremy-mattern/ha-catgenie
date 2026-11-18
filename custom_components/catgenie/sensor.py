@@ -32,8 +32,6 @@ class CatGenieSensorDescription(SensorEntityDescription):
 
 SENSORS: tuple[CatGenieSensorDescription, ...] = (
     CatGenieSensorDescription(
-        # The cloud reports cartridge level as cleaning cycles left (a full
-        # SaniSolution cartridge is about 120 cycles), not a percentage.
         key="sani_solution",
         translation_key="sani_solution",
         native_unit_of_measurement="cycles",
@@ -89,11 +87,17 @@ async def async_setup_entry(
 ) -> None:
     """Add sensors for every CatGenie on the account."""
     coordinator = entry.runtime_data
-    async_add_entities(
-        CatGenieSensor(coordinator, device_id, description)
-        for device_id in coordinator.data
-        for description in SENSORS
-    )
+    
+    entities = []
+    for device_id in coordinator.data:
+        # Load the original sensors
+        for description in SENSORS:
+            entities.append(CatGenieSensor(coordinator, device_id, description))
+            
+        # Add our custom Pet Stats history sensor
+        entities.append(CatGenieHistorySensor(coordinator, device_id))
+        
+    async_add_entities(entities)
 
 
 class CatGenieSensor(CatGenieEntity, SensorEntity):
@@ -115,3 +119,65 @@ class CatGenieSensor(CatGenieEntity, SensorEntity):
     def native_value(self) -> str | int | float | datetime | None:
         """Return the sensor value."""
         return self.entity_description.value_fn(self.device)
+
+
+class CatGenieHistorySensor(CatGenieEntity, SensorEntity):
+    """Custom sensor displaying the recent visit history."""
+
+    def __init__(self, coordinator, device_id: str) -> None:
+        """Initialise the history sensor."""
+        super().__init__(coordinator, device_id, "visit_history")
+        self._attr_icon = "mdi:clipboard-text-clock"
+        self._attr_name = "Visit History"
+
+    @property
+    def native_value(self) -> str | None:
+        """Set the main state to the timestamp of the most recent visit."""
+        history = self._get_filtered_history()
+        if not history:
+            return "No recent visits"
+            
+        latest_ms = history[0].get("timestamp", 0)
+        
+        if latest_ms > 0:
+            dt = datetime.fromtimestamp(latest_ms / 1000.0)
+            return dt.strftime("%b %d, %I:%M %p")
+            
+        return "Unknown"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Store the last 10 visits as a formatted array for dashboards."""
+        history = self._get_filtered_history()
+        formatted_list = []
+        
+        for visit in history[:10]:
+            timestamp_ms = visit.get("timestamp", 0)
+            duration = visit.get("fields", {}).get("durationSeconds", 0)
+            
+            if timestamp_ms > 0:
+                dt = datetime.fromtimestamp(timestamp_ms / 1000.0)
+                formatted_list.append({
+                    "date": dt.strftime("%Y-%m-%d %I:%M %p"),
+                    "duration_seconds": duration,
+                    "minutes_spent": round(duration / 60.0, 1)
+                })
+                
+        return {"recent_visits": formatted_list}
+
+    def _get_filtered_history(self) -> list:
+        """Helper to extract and filter the raw visit array for this specific box."""
+        device_payload = self.coordinator.data.get(self._device_id)
+        if not isinstance(device_payload, dict):
+            return []
+            
+        pet_stats = device_payload.get("pet_stats", {})
+        if not pet_stats or "visitResponses" not in pet_stats:
+            return []
+            
+        serial = self.device.manufacturer_id
+        
+        return [
+            v for v in pet_stats["visitResponses"] 
+            if v.get("fields", {}).get("serialNumber") == serial
+        ]
