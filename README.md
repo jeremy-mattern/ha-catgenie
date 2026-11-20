@@ -25,6 +25,8 @@ For each CatGenie on your account:
 | Start cleaning / Stop cleaning | Buttons | Start or stop a cycle remotely. |
 | Cleaning mode | Select | Automatic (after a cat visit) or Manual. |
 | Child lock, Extra dry, Extra wash, Extra shake | Switches | The same settings as in the app. |
+| Recently Visited | Binary sensor | On for ten minutes as soon as cat leaves litterbox. |
+| Visit History | Sensor | Parsable listing of the last ten visits. |
 
 The device page also shows firmware and hardware versions. It's linked by MAC address to the same unit in your router integration, if you have one.
 
@@ -63,6 +65,8 @@ If the saved login stops working (for example, because it was revoked), Home Ass
 - Flash a light when **Problem** turns on.
 - Switch **Cleaning mode** to Manual at night so the unit stays quiet, and back to Automatic in the morning.
 - Pause other noisy devices while **Cleaning** is on.
+- Get notifications on which litterbox was recently visited if you have multiple CatGenies.
+- Start a bathroom vent or diffuser after cat has finished using litterbox.
 
 ## How it works
 
