@@ -26,7 +26,11 @@ class CatGenieEntity(CoordinatorEntity[CatGenieCoordinator]):
         super().__init__(coordinator)
         self._device_id = device_id
         self._attr_unique_id = f"{device_id}_{key}"
-        device = coordinator.data[device_id]
+        
+        # Safely extract the actual Device from the dictionary payload
+        device_payload = coordinator.data[device_id]
+        device = device_payload.get("device") if isinstance(device_payload, dict) else device_payload
+        
         connections = (
             {(CONNECTION_NETWORK_MAC, format_mac(device.mac_address))}
             if device.mac_address
@@ -46,7 +50,8 @@ class CatGenieEntity(CoordinatorEntity[CatGenieCoordinator]):
     @property
     def device(self) -> Device:
         """The latest data for this unit."""
-        return self.coordinator.data[self._device_id]
+        device_payload = self.coordinator.data[self._device_id]
+        return device_payload.get("device") if isinstance(device_payload, dict) else device_payload
 
     @property
     def available(self) -> bool:
